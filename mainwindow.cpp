@@ -195,3 +195,11 @@ void MainWindow::textChanged() {
         subtitles[currentIndex]->text = subtitleText->toPlainText();
     }
 }
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    if (!subtitles.isEmpty()) {
+        auto answer = QMessageBox::question(this, tr("Unsaved changes"), tr("Discard unsaved changes?"));
+        if (answer != QMessageBox::Yes) return;
+    }
+    QWidget::closeEvent(event);
+}
