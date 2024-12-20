@@ -74,9 +74,9 @@ void MainWindow::readImage() {
             tessApi.SetImage(image.bits(), image.width(), image.height(),
                              image.depth() / 8, image.bytesPerLine());
             auto text = tessApi.GetUTF8Text();
-            subtitleText->setText(text);
+            subtitleText->setPlainText(text);
             subtitle->text = text;
-        } else subtitleText->setText(subtitle->text);
+        } else subtitleText->setPlainText(subtitle->text);
         statusLabel->setText(tr("%1 of %2").arg(currentIndex + 1).arg(subtitles.length()));
         nextAction->setEnabled(subtitles.length() > currentIndex + 1);
         previousAction->setEnabled(currentIndex > 0);
