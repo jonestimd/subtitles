@@ -6,6 +6,7 @@
 #include <QToolBar>
 #include <QRegularExpression>
 #include <QMessageBox>
+#include <QCloseEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -184,6 +185,7 @@ void MainWindow::saveFile() {
             file.write("\n\n");
         }
         file.close();
+        unsaved = false;
     } else QMessageBox::critical(this, tr("File error"), tr("Error opening file"));
 }
 
@@ -200,13 +202,17 @@ void MainWindow::previousImage() {
 void MainWindow::textChanged() {
     if (currentIndex < subtitles.length()) {
         subtitles[currentIndex]->text = subtitleText->toPlainText();
+        unsaved = true;
     }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-    if (!subtitles.isEmpty()) {
+    if (!subtitles.isEmpty() && unsaved) {
         auto answer = QMessageBox::question(this, tr("Unsaved changes"), tr("Discard unsaved changes?"));
-        if (answer != QMessageBox::Yes) return;
+        if (answer != QMessageBox::Yes) {
+            event->ignore();
+            return;
+        }
     }
     QWidget::closeEvent(event);
 }

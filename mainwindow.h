@@ -17,6 +17,7 @@ class MainWindow : public QMainWindow
     QList<Subtitle*> subtitles;
     QString inputDir;
     int currentIndex = 0;
+    bool unsaved = false;
 
     QAction *saveAction;
     QAction *nextAction;
