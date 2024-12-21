@@ -121,7 +121,8 @@ void MainWindow::importFile() {
         if (!name.isEmpty()) {
             auto inputText = QString(content).split("\n");
             bool ok;
-            for (int line = 0, i = 0; line < inputText.length() && i < subtitles.length(); i++) {
+            int i = 0;
+            for (int line = 0; line < inputText.length() && i < subtitles.length(); i++) {
                 auto index = inputText[line].toUInt(&ok);
                 if (!ok) {
                     QMessageBox::critical(this, tr("Input error"), tr("Invalid index at line %1").arg(line+1));
@@ -135,7 +136,7 @@ void MainWindow::importFile() {
                     auto match = timePattern->match(inputText[line]);
                     if (match.hasMatch()) {
                         auto times = match.capturedTexts();
-                        if (subtitles[i]->startTime != times[0] || subtitles[i]->endTime != times[1]) {
+                        if (subtitles[i]->startTime != times[1] || subtitles[i]->endTime != times[2]) {
                             QMessageBox::critical(this, tr("Input error"), tr("Timing mismatch at line %1").arg(line+1));
                             return;
                         }
@@ -153,17 +154,23 @@ void MainWindow::importFile() {
                     }
                 } else QMessageBox::information(this, tr("Input error"), tr("Unexpected end of file"));
             }
+            if (i > currentIndex) {
+                currentIndex = i;
+                readImage();
+            }
         }
     });
 }
 
 void MainWindow::saveFile() {
-    auto filename = QFileDialog::getSaveFileName(this, tr("Save subtitles"), inputDir, tr("Subtitles (*.srt)"));
+    auto filename = QFileDialog::getSaveFileName(this, tr("Save subtitles"), inputDir, tr("Subtitles (*.srt)"),
+                                                 nullptr, QFileDialog::DontConfirmOverwrite);
+    if (filename.isEmpty()) return;
+    if (filename.indexOf('.') < 0) filename.append(".srt");
     if (QFileInfo(filename).exists()) {
         auto answer = QMessageBox::question(this, tr("Replace file"), tr("Replace existing file?"));
         if (answer != QMessageBox::Yes) return;
     }
-    if (filename.indexOf('.') < 0) filename.append(".srt");
     QFile file(filename);
     if (file.open(QFile::WriteOnly)) {
         for (int i = 0; i < subtitles.length() && !subtitles[i]->text.isEmpty(); i++) {
