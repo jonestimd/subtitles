@@ -29,23 +29,32 @@ MainWindow::MainWindow(QWidget *parent)
     toolbar->setIconSize(QSize{16,16});
     addToolBar(toolbar);
 
-    auto openAction = toolbar->addAction(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen), tr("Open file (ctrl+o)"), QKeySequence("ctrl+o"));
+    using ThemeIcon = QIcon::ThemeIcon;
+    auto openAction = toolbar->addAction(QIcon::fromTheme(ThemeIcon::DocumentOpen), tr("Open file (ctrl+o)"), QKeySequence("ctrl+o"));
     connect(openAction, SIGNAL(triggered(bool)), this, SLOT(openFile()));
 
-    auto importAction = toolbar->addAction(QIcon::fromTheme(QIcon::ThemeIcon::EditCopy), tr("Import file (ctrl+i)"), QKeySequence("ctrl+i"));
+    auto importAction = toolbar->addAction(QIcon::fromTheme(ThemeIcon::EditCopy), tr("Import file (ctrl+i)"), QKeySequence("ctrl+i"));
     connect(importAction, SIGNAL(triggered(bool)), this, SLOT(importFile()));
 
-    saveAction = toolbar->addAction(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSaveAs), tr("Save subtitles (ctrl+s)"), QKeySequence("ctrl+s"));
+    saveAction = toolbar->addAction(QIcon::fromTheme(ThemeIcon::DocumentSaveAs), tr("Save subtitles (ctrl+s)"), QKeySequence("ctrl+s"));
     saveAction->setEnabled(false);
     connect(saveAction, SIGNAL(triggered(bool)), this, SLOT(saveFile()));
 
-    nextAction = toolbar->addAction(QIcon::fromTheme(QIcon::ThemeIcon::GoNext), tr("Next subtitle (ctrl+n)"), QKeySequence("ctrl+n"));
+    nextAction = toolbar->addAction(QIcon::fromTheme(ThemeIcon::GoNext), tr("Next subtitle (ctrl+n)"), QKeySequence("ctrl+n"));
     nextAction->setEnabled(false);
     connect(nextAction, SIGNAL(triggered(bool)), this, SLOT(nextImage()));
 
-    previousAction = toolbar->addAction(QIcon::fromTheme(QIcon::ThemeIcon::GoPrevious), tr("Previous subtitle (ctrl+p)"), QKeySequence("ctrl+p"));
+    previousAction = toolbar->addAction(QIcon::fromTheme(ThemeIcon::GoPrevious), tr("Previous subtitle (ctrl+p)"), QKeySequence("ctrl+p"));
     previousAction->setEnabled(false);
     connect(previousAction, SIGNAL(triggered(bool)), this, SLOT(previousImage()));
+
+    toolbar->addSeparator();
+
+    auto italicsAction = toolbar->addAction(QIcon::fromTheme(ThemeIcon::FormatTextItalic), tr("Italics (alt+i"), QKeySequence("alt+i"));
+    connect(italicsAction, SIGNAL(triggered(bool)), this, SLOT(italics()));
+
+    auto boldAction = toolbar->addAction(QIcon::fromTheme(ThemeIcon::FormatTextBold), tr("Bold (alt+b"), QKeySequence("alt+b"));
+    connect(boldAction, SIGNAL(triggered(bool)), this, SLOT(bold()));
 
     auto statusBar = new QStatusBar(this);
     setStatusBar(statusBar);
@@ -97,7 +106,7 @@ void MainWindow::openFile() {
             currentIndex = 0;
             inputDir = QFileInfo(name).path();
             auto inputText = QString(content).split("\n");
-            for (auto line : inputText) {
+            for (const auto &line : std::as_const(inputText)) {
                 auto subtitle = new Subtitle(line.split("\t"));
                 if (subtitle->isValid()) subtitles.append(subtitle);
                 else if (!line.isEmpty()) {
@@ -168,7 +177,7 @@ void MainWindow::saveFile() {
                                                  nullptr, QFileDialog::DontConfirmOverwrite);
     if (filename.isEmpty()) return;
     if (filename.indexOf('.') < 0) filename.append(".srt");
-    if (QFileInfo(filename).exists()) {
+    if (QFileInfo::exists(filename)) {
         auto answer = QMessageBox::question(this, tr("Replace file"), tr("Replace existing file?"));
         if (answer != QMessageBox::Yes) return;
     }
@@ -197,6 +206,48 @@ void MainWindow::nextImage() {
 void MainWindow::previousImage() {
     currentIndex--;
     readImage();
+}
+
+void changeFormat(QTextEdit *input, const QString &tag) {
+    auto size = tag.length();
+    auto etag = QString(tag).insert(1, '/');
+    auto cursor = input->textCursor();
+    if (cursor.hasSelection()) {
+        auto start = cursor.selectionStart();
+        auto end = cursor.selectionEnd();
+        cursor.clearSelection();
+        auto text = input->toPlainText();
+        if (text.first(start).endsWith(tag)) {
+            if (text.indexOf(etag) == end) text.remove(end, size+1);
+            text.remove(start-size, size);
+            start -= size;
+            end -= size;
+        } else {
+            text.insert(end, etag);
+            text.insert(start, tag);
+            start += size;
+            end += size;
+        }
+        input->setPlainText(text);
+        cursor = input->textCursor();
+        cursor.setPosition(start);
+        cursor.setPosition(end, QTextCursor::KeepAnchor);
+        input->setTextCursor(cursor);
+    } else {
+        auto text = input->toPlainText().first(cursor.anchor());
+        auto begin = text.count(tag);
+        auto end = text.count(etag);
+        if (begin > end) cursor.insertText(etag);
+        else cursor.insertText(tag);
+    }
+}
+
+void MainWindow::italics() {
+    changeFormat(subtitleText, "<i>");
+}
+
+void MainWindow::bold() {
+    changeFormat(subtitleText, "<b>");
 }
 
 void MainWindow::textChanged() {

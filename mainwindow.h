@@ -38,6 +38,8 @@ private slots:
     void saveFile();
     void nextImage();
     void previousImage();
+    void italics();
+    void bold();
     void textChanged();
 
 protected:
